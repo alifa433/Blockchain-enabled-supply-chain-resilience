@@ -1,7 +1,3 @@
-{
-  "name": "hardhat-project",
-  "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.2"
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:9800cae4aa90e083bed1240c5b402351e8c0f0eaa40c0144d7c44be923e23c04
+size 135

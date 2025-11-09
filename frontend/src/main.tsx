@@ -1,5 +1,11 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import BCFrontendStarter from "./App";
 
-createRoot(document.getElementById("root")!).render(<BCFrontendStarter />);
+import App from "./App";
+import "./styles.css";
+
+createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);

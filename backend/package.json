@@ -1,3 +1,15 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9800cae4aa90e083bed1240c5b402351e8c0f0eaa40c0144d7c44be923e23c04
-size 135
+{
+  "name": "supply-chain-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy": "node scripts/deploy.js",
+    "export": "node scripts/exportArtifacts.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.3"
+  }
+}

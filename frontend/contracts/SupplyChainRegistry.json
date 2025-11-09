@@ -1,0 +1,360 @@
+{
+  "address": "0x0000000000000000000000000000000000000000",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "address", "name": "account", "type": "address" },
+        { "indexed": false, "internalType": "uint8", "name": "role", "type": "uint8" },
+        { "indexed": false, "internalType": "string", "name": "orgName", "type": "string" }
+      ],
+      "name": "ParticipantRegistered",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint256", "name": "requestId", "type": "uint256" },
+        { "indexed": true, "internalType": "address", "name": "requester", "type": "address" }
+      ],
+      "name": "DeliveryRequested",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint256", "name": "agreementId", "type": "uint256" },
+        { "indexed": true, "internalType": "uint256", "name": "requestId", "type": "uint256" },
+        { "indexed": false, "internalType": "address", "name": "provider", "type": "address" }
+      ],
+      "name": "AgreementDrafted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint256", "name": "agreementId", "type": "uint256" },
+        { "indexed": false, "internalType": "address", "name": "contractAddress", "type": "address" }
+      ],
+      "name": "AgreementDeployed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint256", "name": "requestId", "type": "uint256" },
+        { "indexed": false, "internalType": "string", "name": "statusText", "type": "string" },
+        { "indexed": false, "internalType": "string", "name": "location", "type": "string" }
+      ],
+      "name": "TrackingEventLogged",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            { "internalType": "string", "name": "orgName", "type": "string" },
+            { "internalType": "uint8", "name": "role", "type": "uint8" },
+            { "internalType": "string", "name": "email", "type": "string" },
+            { "internalType": "string", "name": "region", "type": "string" },
+            { "internalType": "string", "name": "metadataURI", "type": "string" },
+            { "internalType": "string", "name": "vehicleType", "type": "string" },
+            { "internalType": "uint256", "name": "capacityPerTrip", "type": "uint256" },
+            { "internalType": "uint256", "name": "baseCharge", "type": "uint256" },
+            { "internalType": "uint256", "name": "leadTimeHours", "type": "uint256" },
+            { "internalType": "uint256", "name": "collateralPct", "type": "uint256" }
+          ],
+          "internalType": "struct SupplyChainRegistry.RegistrationInput",
+          "name": "input",
+          "type": "tuple"
+        },
+        { "internalType": "string[]", "name": "coverageAreas", "type": "string[]" }
+      ],
+      "name": "register",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "account", "type": "address" }
+      ],
+      "name": "participants",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "string", "name": "orgName", "type": "string" },
+            { "internalType": "uint8", "name": "role", "type": "uint8" },
+            { "internalType": "string", "name": "email", "type": "string" },
+            { "internalType": "string", "name": "region", "type": "string" },
+            { "internalType": "string", "name": "metadataURI", "type": "string" },
+            { "internalType": "bool", "name": "active", "type": "bool" }
+          ],
+          "internalType": "struct SupplyChainRegistry.Participant",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "account", "type": "address" }
+      ],
+      "name": "getParticipant",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "string", "name": "orgName", "type": "string" },
+            { "internalType": "uint8", "name": "role", "type": "uint8" },
+            { "internalType": "string", "name": "email", "type": "string" },
+            { "internalType": "string", "name": "region", "type": "string" },
+            { "internalType": "string", "name": "metadataURI", "type": "string" },
+            { "internalType": "bool", "name": "active", "type": "bool" }
+          ],
+          "internalType": "struct SupplyChainRegistry.Participant",
+          "name": "participant",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            { "internalType": "string", "name": "vehicleType", "type": "string" },
+            { "internalType": "string[]", "name": "coverageAreas", "type": "string[]" },
+            { "internalType": "uint256", "name": "capacityPerTrip", "type": "uint256" },
+            { "internalType": "uint256", "name": "baseCharge", "type": "uint256" },
+            { "internalType": "uint256", "name": "leadTimeHours", "type": "uint256" },
+            { "internalType": "uint256", "name": "collateralPct", "type": "uint256" },
+            { "internalType": "bool", "name": "exists", "type": "bool" }
+          ],
+          "internalType": "struct SupplyChainRegistry.CarrierProfile",
+          "name": "carrier",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            { "internalType": "string", "name": "demander", "type": "string" },
+            { "internalType": "string", "name": "fromRegion", "type": "string" },
+            { "internalType": "string", "name": "toRegion", "type": "string" },
+            { "internalType": "string", "name": "materialId", "type": "string" },
+            { "internalType": "uint256", "name": "quantity", "type": "uint256" },
+            { "internalType": "uint256", "name": "deadline", "type": "uint256" },
+            { "internalType": "uint256", "name": "maxPrice", "type": "uint256" },
+            { "internalType": "uint256", "name": "collateralStake", "type": "uint256" },
+            { "internalType": "string", "name": "notes", "type": "string" }
+          ],
+          "internalType": "struct SupplyChainRegistry.RequestInput",
+          "name": "input",
+          "type": "tuple"
+        }
+      ],
+      "name": "createDeliveryRequest",
+      "outputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "requestId", "type": "uint256" }
+      ],
+      "name": "getDeliveryRequest",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "id", "type": "uint256" },
+            { "internalType": "address", "name": "requester", "type": "address" },
+            { "internalType": "string", "name": "demander", "type": "string" },
+            { "internalType": "string", "name": "fromRegion", "type": "string" },
+            { "internalType": "string", "name": "toRegion", "type": "string" },
+            { "internalType": "string", "name": "materialId", "type": "string" },
+            { "internalType": "uint256", "name": "quantity", "type": "uint256" },
+            { "internalType": "uint256", "name": "deadline", "type": "uint256" },
+            { "internalType": "uint256", "name": "maxPrice", "type": "uint256" },
+            { "internalType": "uint256", "name": "collateralStake", "type": "uint256" },
+            { "internalType": "string", "name": "notes", "type": "string" },
+            { "internalType": "bool", "name": "open", "type": "bool" }
+          ],
+          "internalType": "struct SupplyChainRegistry.DeliveryRequest",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "deliveryRequestCount",
+      "outputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "requestId", "type": "uint256" }
+      ],
+      "name": "findMatches",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "address", "name": "provider", "type": "address" },
+            { "internalType": "string", "name": "providerName", "type": "string" },
+            { "internalType": "uint8", "name": "providerRole", "type": "uint8" },
+            { "internalType": "uint256", "name": "score", "type": "uint256" },
+            { "internalType": "bool", "name": "capacityOk", "type": "bool" },
+            { "internalType": "uint256", "name": "priceEstimate", "type": "uint256" },
+            { "internalType": "uint256", "name": "leadTimeHours", "type": "uint256" },
+            { "internalType": "uint256", "name": "co2EstimateKg", "type": "uint256" }
+          ],
+          "internalType": "struct SupplyChainRegistry.MatchCandidate[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "requestId", "type": "uint256" },
+            { "internalType": "address", "name": "provider", "type": "address" },
+            { "internalType": "string", "name": "partyAName", "type": "string" },
+            { "internalType": "string", "name": "partyBName", "type": "string" },
+            { "internalType": "string", "name": "onTimeReward", "type": "string" },
+            { "internalType": "string", "name": "tardyPenalty", "type": "string" },
+            { "internalType": "string", "name": "metadataURI", "type": "string" },
+            {
+              "components": [
+                { "internalType": "string", "name": "key", "type": "string" },
+                { "internalType": "string", "name": "value", "type": "string" }
+              ],
+              "internalType": "struct SupplyChainRegistry.ContractTerm[]",
+              "name": "terms",
+              "type": "tuple[]"
+            }
+          ],
+          "internalType": "struct SupplyChainRegistry.AgreementDraftInput",
+          "name": "input",
+          "type": "tuple"
+        }
+      ],
+      "name": "draftContract",
+      "outputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "agreementId", "type": "uint256" }
+      ],
+      "name": "getAgreement",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "id", "type": "uint256" },
+            { "internalType": "uint256", "name": "requestId", "type": "uint256" },
+            { "internalType": "address", "name": "demander", "type": "address" },
+            { "internalType": "address", "name": "provider", "type": "address" },
+            { "internalType": "string", "name": "partyAName", "type": "string" },
+            { "internalType": "string", "name": "partyBName", "type": "string" },
+            { "internalType": "string", "name": "onTimeReward", "type": "string" },
+            { "internalType": "string", "name": "tardyPenalty", "type": "string" },
+            { "internalType": "uint8", "name": "status", "type": "uint8" },
+            { "internalType": "address", "name": "contractAddress", "type": "address" },
+            { "internalType": "string", "name": "metadataURI", "type": "string" }
+          ],
+          "internalType": "struct SupplyChainRegistry.DeliveryAgreement",
+          "name": "agreement",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            { "internalType": "string", "name": "key", "type": "string" },
+            { "internalType": "string", "name": "value", "type": "string" }
+          ],
+          "internalType": "struct SupplyChainRegistry.ContractTerm[]",
+          "name": "terms",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "agreementId", "type": "uint256" }
+      ],
+      "name": "deployContract",
+      "outputs": [
+        { "internalType": "address", "name": "", "type": "address" }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "requestId", "type": "uint256" },
+        { "internalType": "string", "name": "statusText", "type": "string" },
+        { "internalType": "string", "name": "location", "type": "string" }
+      ],
+      "name": "logTrackingEvent",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "requestId", "type": "uint256" }
+      ],
+      "name": "trackingFor",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+            { "internalType": "string", "name": "statusText", "type": "string" },
+            { "internalType": "string", "name": "location", "type": "string" }
+          ],
+          "internalType": "struct SupplyChainRegistry.TrackingEvent[]",
+          "name": "events",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "agreementId", "type": "uint256" }
+      ],
+      "name": "getAgreementTerms",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "string", "name": "key", "type": "string" },
+            { "internalType": "string", "name": "value", "type": "string" }
+          ],
+          "internalType": "struct SupplyChainRegistry.ContractTerm[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x"
+}

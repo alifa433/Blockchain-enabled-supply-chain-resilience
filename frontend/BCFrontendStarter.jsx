@@ -13,6 +13,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { CheckCircle2, Clock, Coins, Factory, FileText, Leaf, MapPin, Package, Search, ShieldCheck, Truck, UserPlus, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
+import type { Registration, DeliveryRequest, MatchCandidate, SmartContractDraft, TrackingEvent, SupplyChainApi } from "./api";
+import { createReadOnlyProvider, createSupplyChainApi, requestWalletConnection, deploymentInfo } from "./api";
 
 /**
  * BC Frontend Starter – Single-file React component
@@ -26,157 +28,54 @@ import { motion } from "framer-motion";
  * To wire it to your backend, replace the `api` functions with real calls.
  */
 
-// ---------- Mock types & data ----------
-
-type Role = "supplier" | "manufacturer" | "depot" | "carrier" | "demander";
-
-interface Registration {
-  orgName: string;
-  role: Role;
-  email: string;
-  region: string;
-  // Supplier-specific
-  materials?: Array<{ id: string; name: string; unitPrice: number; discountEligible: boolean }>;
-  // Carrier-specific
-  coverageAreas?: string[];
-  vehicleType?: string; // e.g., Van, Truck, EV
-  capacityPerTrip?: number;
-  baseCharge?: number; // standard delivery charge
-  leadTimeHrs?: number;
-  collateralPct?: number; // collateral percentage they stake
-}
-
-interface DeliveryRequest {
-  id: string;
-  demander: string; // org name
-  fromRegion: string;
-  toRegion: string;
-  materialId: string;
-  quantity: number;
-  deadlineISO: string;
-  maxPrice?: number;
-  collateralStake?: number; // in token units
-  notes?: string;
-}
-
-interface MatchCandidate {
-  providerName: string;
-  providerRole: Role; // mostly carrier or supplier
-  score: number; // 0..100
-  capacityOK: boolean;
-  priceEstimate: number;
-  leadTimeHrs: number;
-  co2EstimateKg: number;
-}
-
-interface ContractTerm {
-  key: string;
-  value: string | number;
-}
-
-interface SmartContractDraft {
-  id: string;
-  requestId: string;
-  parties: string[]; // [demander, provider]
-  terms: ContractTerm[];
-  onTimeReward: string; // token or fiat
-  tardyPenalty: string;
-  status: "DRAFT" | "DEPLOYED" | "COMPLETED" | "DISPUTED";
-}
-
-interface TrackingEvent {
-  tsISO: string;
-  status: string;
-  location: string;
-}
-
-// ---------- Mock API layer (replace with real endpoints) ----------
-
-const api = {
-  async register(payload: Registration) {
-    await wait(10);
-    return { ok: true, id: Math.random().toString(36).slice(2) } as const;
-  },
-  async createDeliveryRequest(payload: Omit<DeliveryRequest, "id">) {
-    await wait(10);
-    return { ok: true, id: "REQ-" + Math.random().toString(36).slice(2) } as const;
-  },
-  async findMatches(requestId: string): Promise<MatchCandidate[]> {
-    await wait(10);
-    return [
-      { providerName: "GreenWheels Logistics", providerRole: "carrier", score: 92, capacityOK: true, priceEstimate: 1750, leadTimeHrs: 20, co2EstimateKg: 88 },
-      { providerName: "RapidHaul", providerRole: "carrier", score: 84, capacityOK: true, priceEstimate: 1620, leadTimeHrs: 26, co2EstimateKg: 140 },
-      { providerName: "EcoFleet West", providerRole: "carrier", score: 78, capacityOK: false, priceEstimate: 1490, leadTimeHrs: 30, co2EstimateKg: 110 },
-    ];
-  },
-  async draftContract(requestId: string, partyA: string, partyB: string): Promise<SmartContractDraft> {
-    await wait(10);
-    return {
-      id: "SC-" + Math.random().toString(36).slice(2),
-      requestId,
-      parties: [partyA, partyB],
-      status: "DRAFT",
-      onTimeReward: "2% collateral back + fee release",
-      tardyPenalty: "Collateral slashed 60% + penalty 5%",
-      terms: [
-        { key: "Delivery Deadline", value: new Date(Date.now() + 72 * 3600 * 1000).toISOString() },
-        { key: "Payment Option", value: "Token or Fiat" },
-        { key: "Lead Time Target (hrs)", value: 24 },
-        { key: "CO2 Budget (kg)", value: 120 },
-      ],
-    };
-  },
-  async deployContract(contractId: string) {
-    await wait(10);
-    return { ok: true, tx: "0x" + Math.random().toString(16).slice(2) } as const;
-  },
-  async trackingFor(requestId: string): Promise<TrackingEvent[]> {
-    await wait(10);
-    return [
-      { tsISO: new Date(Date.now() - 8 * 3600 * 1000).toISOString(), status: "Picked up", location: "Kelowna DC" },
-      { tsISO: new Date(Date.now() - 4 * 3600 * 1000).toISOString(), status: "In transit", location: "Kamloops" },
-      { tsISO: new Date(Date.now() - 1 * 3600 * 1000).toISOString(), status: "Arriving window", location: "Vancouver Port" },
-    ];
-  },
-};
-
-function wait(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
-
 // ---------- Simple in-app tests (no external runner) ----------
 
 type TestResult = { name: string; ok: boolean; details?: string };
 
-async function runSelfTests(): Promise<TestResult[]> {
+async function runSelfTests(api: SupplyChainApi | null): Promise<TestResult[]> {
   const results: TestResult[] = [];
   const push = (name: string, ok: boolean, details?: string) => results.push({ name, ok, details });
 
-  // Test 1: Register returns id
-  const reg = await api.register({ orgName: "T", role: "supplier", email: "t@t", region: "BC" });
-  push("register() returns id", reg.ok && typeof reg.id === "string" && reg.id.length > 0);
+  if (!api) {
+    push("API available", false, "Deploy contracts and regenerate frontend artifacts.");
+    return results;
+  }
 
-  // Test 2: Request id prefix
-  const req = await api.createDeliveryRequest({ demander: "D", fromRegion: "A", toRegion: "B", materialId: "M", quantity: 1, deadlineISO: new Date().toISOString() });
-  push("createDeliveryRequest() prefix", req.ok && req.id.startsWith("REQ-"));
+  if (!api.canWrite) {
+    push("Wallet connected", false, "Connect a wallet to run integration tests.");
+    return results;
+  }
 
-  // Test 3: Matches shape
-  const ms = await api.findMatches(req.id);
-  const shapeOK = Array.isArray(ms) && ms.every(m => typeof m.providerName === "string" && typeof m.priceEstimate === "number");
-  push("findMatches() shape", shapeOK, shapeOK ? undefined : "Invalid candidate structure");
+  try {
+    const reg = await api.register({ orgName: "T", role: "supplier", email: "t@t", region: "BC" });
+    push("register() returns id", reg.ok && typeof reg.id === "string" && reg.id.length > 0);
+  } catch (err: any) {
+    push("register() returns id", false, err?.message ?? String(err));
+    return results;
+  }
 
-  // Test 4: Contract contains required term key
-  const draft = await api.draftContract(req.id, "A", "B");
-  const hasLead = draft.terms.some(t => t.key.includes("Lead Time"));
-  push("draftContract() terms include Lead Time", hasLead);
+  try {
+    const req = await api.createDeliveryRequest({ demander: "D", fromRegion: "A", toRegion: "B", materialId: "M", quantity: 1, deadlineISO: new Date().toISOString() });
+    push("createDeliveryRequest() prefix", req.ok && req.id.startsWith("REQ-"));
 
-  // Test 5: Deploy returns tx
-  const dep = await api.deployContract(draft.id);
-  push("deployContract() returns tx", dep.ok && typeof dep.tx === "string" && dep.tx.startsWith("0x"));
+    const ms = await api.findMatches(req.id);
+    const shapeOK = Array.isArray(ms) && ms.every(m => typeof m.providerName === "string" && typeof m.priceEstimate === "number");
+    push("findMatches() shape", shapeOK, shapeOK ? undefined : "Invalid candidate structure");
 
-  // Test 6: Tracking ordered by time (non-increasing ts acceptable)
-  const tr = await api.trackingFor(req.id);
-  const times = tr.map(t => +new Date(t.tsISO));
-  const ordered = times.every((v, i, a) => i === 0 || v >= a[i - 1] || v <= a[i - 1]); // trivial truthy; just sanity
-  push("trackingFor() returns events", Array.isArray(tr) && tr.length > 0 && ordered);
+    const draft = await api.draftContract(req.id, "A", "B");
+    const hasLead = draft.terms.some(t => t.key.includes("Lead Time"));
+    push("draftContract() terms include Lead Time", hasLead);
+
+    const dep = await api.deployContract(draft.id);
+    push("deployContract() returns tx", dep.ok && typeof dep.tx === "string" && dep.tx.startsWith("0x"));
+
+    const tr = await api.trackingFor(req.id);
+    const times = tr.map(t => +new Date(t.tsISO));
+    const ordered = times.every((v, i, a) => i === 0 || v >= a[i - 1] || v <= a[i - 1]);
+    push("trackingFor() returns events", Array.isArray(tr) && tr.length > 0 && ordered);
+  } catch (err: any) {
+    push("Flow execution", false, err?.message ?? String(err));
+  }
 
   return results;
 }
@@ -203,9 +102,23 @@ const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string | num
   </Card>
 );
 
+const truncateAccount = (address?: string | null) => {
+  if (!address) return "";
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+};
+
 // ---------- Main Component ----------
 
 export default function BCFrontendStarter() {
+  const readOnlyProvider = useMemo(() => createReadOnlyProvider(), []);
+  const [browserProvider, setBrowserProvider] = useState<any>(null);
+  const [signer, setSigner] = useState<any>(null);
+  const [account, setAccount] = useState<string | null>(null);
+  const [chainId, setChainId] = useState<string | null>(null);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [api, setApi] = useState<SupplyChainApi | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+
   const [reg, setReg] = useState<Registration>({ orgName: "", role: "supplier", email: "", region: "BC" });
   const [submitting, setSubmitting] = useState(false);
   const [regId, setRegId] = useState<string | null>(null);
@@ -229,6 +142,60 @@ export default function BCFrontendStarter() {
   const [co2TargetEnabled, setCo2TargetEnabled] = useState(true);
   const [testResults, setTestResults] = useState<TestResult[] | null>(null);
 
+  useEffect(() => {
+    try {
+      const provider = signer?.provider ?? readOnlyProvider;
+      const instance = createSupplyChainApi({ provider, signer, account });
+      setApi(instance);
+      setApiError(null);
+    } catch (err: any) {
+      setApi(null);
+      setApiError(err?.message ?? String(err));
+    }
+  }, [signer, readOnlyProvider, account]);
+
+  useEffect(() => {
+    if (!browserProvider?.provider?.on) return;
+    const provider = browserProvider.provider;
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (!accounts || accounts.length === 0) {
+        setAccount(null);
+        setSigner(null);
+      } else {
+        setAccount(accounts[0]);
+        browserProvider.getSigner().then((sig: any) => setSigner(sig)).catch((err: any) => setWalletError(err?.message ?? String(err)));
+      }
+    };
+
+    const handleChainChanged = (nextChainId: string) => {
+      setChainId(nextChainId);
+    };
+
+    provider.on("accountsChanged", handleAccountsChanged);
+    provider.on("chainChanged", handleChainChanged);
+
+    return () => {
+      if (provider.removeListener) {
+        provider.removeListener("accountsChanged", handleAccountsChanged);
+        provider.removeListener("chainChanged", handleChainChanged);
+      }
+    };
+  }, [browserProvider]);
+
+  const connectWallet = async () => {
+    try {
+      const { browserProvider, signer, account, chainId } = await requestWalletConnection();
+      setBrowserProvider(browserProvider);
+      setSigner(signer);
+      setAccount(account);
+      setChainId(chainId);
+      setWalletError(null);
+    } catch (err: any) {
+      setWalletError(err?.message ?? String(err));
+    }
+  };
+
   const topKPIs = useMemo(() => ({
     onTimeRate: "96.2%",
     avgLeadTime: "21.8h",
@@ -237,12 +204,12 @@ export default function BCFrontendStarter() {
   }), []);
 
   useEffect(() => {
-    // Run self-tests automatically once in dev/demo contexts
+    if (!api || !api.canWrite) return;
     (async () => {
-      const res = await runSelfTests();
+      const res = await runSelfTests(api);
       setTestResults(res);
     })();
-  }, []);
+  }, [api]);
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -250,6 +217,28 @@ export default function BCFrontendStarter() {
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Blockchain-enabled SDDP Supply Chain</h1>
         <p className="text-muted-foreground mt-2">Transparency - Security - Resilience</p>
       </motion.div>
+
+      <Card className="mb-8">
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <CardTitle className="text-base">Wallet & Network</CardTitle>
+            <CardDescription>
+              {deploymentInfo ? `Frontend wired to ${deploymentInfo.network} deployment` : "Run the Hardhat deploy script to generate artifacts."}
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant={account ? "secondary" : "outline"}>{account ? truncateAccount(account) : "No wallet connected"}</Badge>
+            <Badge variant="outline">Chain: {chainId ?? deploymentInfo?.network ?? "unknown"}</Badge>
+            <Button onClick={connectWallet}>{account ? "Switch Wallet" : "Connect Wallet"}</Button>
+          </div>
+        </CardHeader>
+        {(walletError || apiError) && (
+          <CardContent>
+            {walletError && <p className="text-sm text-destructive">{walletError}</p>}
+            {apiError && <p className="text-sm text-destructive">{apiError}</p>}
+          </CardContent>
+        )}
+      </Card>
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -341,11 +330,19 @@ export default function BCFrontendStarter() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <ShieldCheck className="h-4 w-4"/> Data anchored on-chain.
               </div>
-              <Button disabled={submitting} onClick={async()=>{
+              <Button disabled={submitting || !api?.canWrite} onClick={async()=>{
+                if (!api) {
+                  setWalletError(apiError ?? "Smart contract connection unavailable");
+                  return;
+                }
                 setSubmitting(true);
-                const res = await api.register(reg);
+                try {
+                  const res = await api.register(reg);
+                  if (res.ok) setRegId(res.id);
+                } catch (err: any) {
+                  setWalletError(err?.message ?? String(err));
+                }
                 setSubmitting(false);
-                if (res.ok) setRegId(res.id);
               }}>{submitting ? "Submitting..." : "Register"}</Button>
             </CardFooter>
           </Card>
@@ -401,9 +398,17 @@ export default function BCFrontendStarter() {
               </div>
             </CardContent>
             <CardFooter className="justify-end">
-              <Button onClick={async()=>{
-                const res = await api.createDeliveryRequest(reqForm);
-                if (res.ok) setRequestId(res.id);
+              <Button disabled={!api?.canWrite} onClick={async()=>{
+                if (!api) {
+                  setWalletError(apiError ?? "Smart contract connection unavailable");
+                  return;
+                }
+                try {
+                  const res = await api.createDeliveryRequest(reqForm);
+                  if (res.ok) setRequestId(res.id);
+                } catch (err: any) {
+                  setWalletError(err?.message ?? String(err));
+                }
               }}>Submit Request</Button>
             </CardFooter>
           </Card>
@@ -416,6 +421,10 @@ export default function BCFrontendStarter() {
               </CardHeader>
               <CardFooter>
                 <Button variant="secondary" onClick={async()=>{
+                  if (!api) {
+                    setWalletError(apiError ?? "Smart contract connection unavailable");
+                    return;
+                  }
                   const m = await api.findMatches(requestId);
                   setMatches(m);
                 }}><Search className="mr-2 h-4 w-4"/> Find Matches</Button>
@@ -452,7 +461,7 @@ export default function BCFrontendStarter() {
                 </TableHeader>
                 <TableBody>
                   {(matches ?? []).map((m)=> (
-                    <TableRow key={m.providerName}>
+                    <TableRow key={m.providerAddress ?? m.providerName}>
                       <TableCell className="font-medium">{m.providerName}</TableCell>
                       <TableCell className="uppercase text-xs">{m.providerRole}</TableCell>
                       <TableCell><Badge>{m.score}</Badge></TableCell>
@@ -463,13 +472,13 @@ export default function BCFrontendStarter() {
                       <TableCell>
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button size="sm" variant="outline">Draft Contract</Button>
+                            <Button size="sm" variant="outline" disabled={!api?.canWrite}>Draft Contract</Button>
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-xl">
                             <DialogHeader>
                               <DialogTitle>Draft Smart Contract</DialogTitle>
                             </DialogHeader>
-                            <ContractDraftForm providerName={m.providerName} requestId={requestId ?? ""} onDraft={setContract} />
+                            <ContractDraftForm match={m} requestId={requestId ?? ""} api={api} onDraft={(draft)=>setContract(draft ?? null)} />
                           </DialogContent>
                         </Dialog>
                       </TableCell>
@@ -549,14 +558,18 @@ export default function BCFrontendStarter() {
               )}
             </CardContent>
             <CardFooter className="justify-end gap-2">
-              <Button variant="secondary" disabled={!contract || deploying} onClick={async()=>{
-                if (!contract) return;
+              <Button variant="secondary" disabled={!contract || deploying || !api?.canWrite} onClick={async()=>{
+                if (!contract || !api) return;
                 setDeploying(true);
-                const res = await api.deployContract(contract.id);
-                setDeploying(false);
-                if (res.ok) {
-                  setContract({ ...contract, status: "DEPLOYED" });
+                try {
+                  const res = await api.deployContract(contract.id);
+                  if (res.ok) {
+                    setContract({ ...contract, status: "DEPLOYED" });
+                  }
+                } catch (err: any) {
+                  setWalletError(err?.message ?? String(err));
                 }
+                setDeploying(false);
               }}>{deploying ? "Deploying..." : "Deploy to Chain"}</Button>
             </CardFooter>
           </Card>
@@ -572,7 +585,7 @@ export default function BCFrontendStarter() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
                 <Input placeholder="Enter Request ID" value={requestId ?? ""} onChange={(e)=>setRequestId(e.target.value)}/>
-                <Button onClick={async()=>{ if (requestId) setEvents(await api.trackingFor(requestId)); }}>Load</Button>
+                <Button onClick={async()=>{ if (!requestId || !api) return setWalletError(apiError ?? "Smart contract connection unavailable"); const evs = await api.trackingFor(requestId); setEvents(evs); }}>Load</Button>
               </div>
               <Table>
                 <TableHeader>
@@ -645,7 +658,7 @@ export default function BCFrontendStarter() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2 mb-3">
-                    <Button size="sm" onClick={async()=> setTestResults(await runSelfTests())}>Run Self Tests</Button>
+                    <Button size="sm" onClick={async()=> setTestResults(await runSelfTests(api))}>Run Self Tests</Button>
                     {testResults && (
                       <Badge variant={testResults.every(t=>t.ok) ? "secondary" : "destructive"}>
                         {testResults.filter(t=>t.ok).length}/{testResults.length} passed
@@ -682,11 +695,35 @@ export default function BCFrontendStarter() {
   );
 }
 
-function ContractDraftForm({ providerName, requestId, onDraft }: { providerName: string; requestId: string; onDraft: (c: SmartContractDraft)=>void }) {
+function ContractDraftForm({ match, requestId, api, onDraft }: { match: MatchCandidate; requestId: string; api: SupplyChainApi | null; onDraft: (c?: SmartContractDraft)=>void }) {
   const [partyA, setPartyA] = useState("DemanderOrg");
-  const [partyB, setPartyB] = useState(providerName);
+  const [partyB, setPartyB] = useState(match.providerName);
   const [deployNow, setDeployNow] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDraft = async () => {
+    if (!requestId || !api) {
+      setError("Connect a wallet before drafting");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const draft = await api.draftContract(requestId, partyA, partyB, match.providerAddress);
+      let nextDraft = draft;
+      if (deployNow) {
+        const res = await api.deployContract(draft.id);
+        if (res.ok) {
+          nextDraft = { ...draft, status: "DEPLOYED" } as SmartContractDraft;
+        }
+      }
+      onDraft?.(nextDraft);
+    } catch (err: any) {
+      setError(err?.message ?? String(err));
+    }
+    setBusy(false);
+  };
 
   return (
     <div className="grid gap-4">
@@ -694,19 +731,15 @@ function ContractDraftForm({ providerName, requestId, onDraft }: { providerName:
         <Field label="Party A (Demander)"><Input value={partyA} onChange={(e)=>setPartyA(e.target.value)} /></Field>
         <Field label="Party B (Provider)"><Input value={partyB} onChange={(e)=>setPartyB(e.target.value)} /></Field>
       </div>
+      <Field label="Provider Address"><Input value={match.providerAddress} readOnly /></Field>
       <div className="flex items-center gap-3">
         <Switch checked={deployNow} onCheckedChange={setDeployNow} />
         <Label>Deploy immediately after draft</Label>
       </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button variant="secondary" onClick={()=>onDraft && onDraft(undefined as any)}>Cancel</Button>
-        <Button disabled={busy} onClick={async()=>{
-          if (!requestId) return;
-          setBusy(true);
-          const draft = await api.draftContract(requestId, partyA, partyB);
-          onDraft(draft);
-          setBusy(false);
-        }}>{busy ? "Drafting..." : "Create Draft"}</Button>
+        <Button variant="secondary" onClick={()=>onDraft?.(undefined)}>Cancel</Button>
+        <Button disabled={busy || !api?.canWrite} onClick={handleDraft}>{busy ? "Drafting..." : "Create Draft"}</Button>
       </div>
     </div>
   );

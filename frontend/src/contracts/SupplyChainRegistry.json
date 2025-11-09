@@ -171,6 +171,7 @@
           "components": [
             { "internalType": "uint256", "name": "id", "type": "uint256" },
             { "internalType": "address", "name": "requester", "type": "address" },
+            { "internalType": "address", "name": "carrier", "type": "address" },
             { "internalType": "string", "name": "demander", "type": "string" },
             { "internalType": "string", "name": "fromRegion", "type": "string" },
             { "internalType": "string", "name": "toRegion", "type": "string" },

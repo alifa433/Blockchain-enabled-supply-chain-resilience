@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Configure npm registry
+        run: npm config set registry https://registry.npmjs.org/
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          if ! npm install; then
+            npm install -g pnpm
+            pnpm install --legacy-peer-deps
+          fi
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npx hardhat test

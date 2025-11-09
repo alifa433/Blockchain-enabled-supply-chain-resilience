@@ -1,52 +1,38 @@
-const { writeFileSync, mkdirSync } = require("fs");
+const { mkdirSync, writeFileSync } = require("fs");
 const path = require("path");
 const hre = require("hardhat");
+const { exportArtifacts } = require("./exportArtifacts");
 
 async function main() {
   await hre.run("compile");
 
   const registry = await hre.ethers.deployContract("SupplyChainRegistry");
   await registry.waitForDeployment();
-  const address = await registry.getAddress();
+  const registryAddress = await registry.getAddress();
 
-  console.log(`SupplyChainRegistry deployed to ${address}`);
+  console.log(`SupplyChainRegistry deployed to ${registryAddress}`);
 
-  const artifact = await hre.artifacts.readArtifact("SupplyChainRegistry");
-  const escrowArtifact = await hre.artifacts.readArtifact("DeliveryEscrow");
+  const deploymentSummary = {
+    network: hre.network.name,
+    registry: registryAddress,
+    timestamp: Math.floor(Date.now() / 1000),
+    contracts: {
+      SupplyChainRegistry: {
+        address: registryAddress,
+      },
+      DeliveryEscrow: {
+        address: null,
+      },
+    },
+  };
 
-  const frontendDir = path.join(__dirname, "..", "..", "frontend", "src", "contracts");
-  mkdirSync(frontendDir, { recursive: true });
+  const deploymentsDir = path.join(__dirname, "..", "deployments");
+  mkdirSync(deploymentsDir, { recursive: true });
+  const deploymentPath = path.join(deploymentsDir, `${hre.network.name}.json`);
+  writeFileSync(deploymentPath, JSON.stringify(deploymentSummary, null, 2), "utf-8");
+  console.log(`Deployment metadata saved to ${deploymentPath}`);
 
-  writeFileSync(
-    path.join(frontendDir, "SupplyChainRegistry.json"),
-    JSON.stringify({
-      address,
-      abi: artifact.abi,
-      bytecode: artifact.bytecode
-    }, null, 2),
-    "utf-8"
-  );
-
-  writeFileSync(
-    path.join(frontendDir, "DeliveryEscrow.json"),
-    JSON.stringify({
-      abi: escrowArtifact.abi,
-      bytecode: escrowArtifact.bytecode
-    }, null, 2),
-    "utf-8"
-  );
-
-  writeFileSync(
-    path.join(frontendDir, "deployment.json"),
-    JSON.stringify({
-      network: hre.network.name,
-      registry: address,
-      timestamp: Math.floor(Date.now() / 1000)
-    }, null, 2),
-    "utf-8"
-  );
-
-  console.log("Frontend artifacts written to", frontendDir);
+  await exportArtifacts(deploymentSummary);
 }
 
 main().catch((err) => {

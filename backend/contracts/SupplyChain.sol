@@ -44,6 +44,7 @@ contract SupplyChainRegistry {
     struct DeliveryRequest {
         uint256 id;
         address requester;
+        address carrier;
         string demander;
         string fromRegion;
         string toRegion;
@@ -201,6 +202,7 @@ contract SupplyChainRegistry {
         DeliveryRequest memory request = DeliveryRequest({
             id: newId,
             requester: msg.sender,
+            carrier: address(0),
             demander: input.demander,
             fromRegion: input.fromRegion,
             toRegion: input.toRegion,
@@ -290,7 +292,8 @@ contract SupplyChainRegistry {
     }
 
     function draftContract(AgreementDraftInput calldata input) external onlyRegistered returns (uint256) {
-        DeliveryRequest memory request = getDeliveryRequest(input.requestId);
+        require(input.requestId > 0 && input.requestId <= deliveryRequests.length, "REQUEST_UNKNOWN");
+        DeliveryRequest storage request = deliveryRequests[input.requestId - 1];
         require(request.open, "REQUEST_CLOSED");
         require(request.requester == msg.sender, "ONLY_REQUESTER");
         require(participants[input.provider].active, "PROVIDER_UNKNOWN");
@@ -309,6 +312,8 @@ contract SupplyChainRegistry {
         agreement.tardyPenalty = input.tardyPenalty;
         agreement.status = AgreementStatus.Draft;
         agreement.metadataURI = input.metadataURI;
+
+        request.carrier = input.provider;
 
         if (input.terms.length > 0) {
             ContractTerm[] storage storedTerms = agreementTerms[newId];
@@ -348,7 +353,11 @@ contract SupplyChainRegistry {
 
     function logTrackingEvent(uint256 requestId, string calldata statusText, string calldata location) external onlyRegistered {
         DeliveryRequest memory request = getDeliveryRequest(requestId);
-        require(request.requester == msg.sender || participants[msg.sender].role == Role.Carrier, "NOT_AUTHORISED");
+        require(
+            request.requester == msg.sender ||
+                (participants[msg.sender].role == Role.Carrier && request.carrier == msg.sender),
+            "NOT_AUTHORISED"
+        );
         requestTracking[requestId].push(TrackingEvent(block.timestamp, statusText, location));
         emit TrackingEventLogged(requestId, statusText, location);
     }

@@ -1,5 +1,13 @@
 {
   "network": "hardhat",
   "registry": "0x0000000000000000000000000000000000000000",
-  "timestamp": 0
+  "timestamp": 0,
+  "contracts": {
+    "SupplyChainRegistry": {
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    "DeliveryEscrow": {
+      "address": null
+    }
+  }
 }

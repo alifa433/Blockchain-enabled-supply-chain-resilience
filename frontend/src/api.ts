@@ -344,6 +344,7 @@ export type DeploymentMetadata = {
   network: string;
   registry: string;
   timestamp: number;
+  contracts?: Record<string, { address: string | null }>;
 };
 
 export const deploymentInfo: DeploymentMetadata | null = (deployment as DeploymentMetadata) ?? null;

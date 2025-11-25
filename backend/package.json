@@ -1,3 +1,19 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:c209b3234dc9b6f40faf564b99f6df723e635742d0c063ccf94a376712e13501
-size 449
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Smart contracts and deployment scripts for the supply chain registry",
+  "main": "hardhat.config.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "deploy": "npx hardhat run scripts/deploy.js"
+  },
+  "keywords": ["hardhat", "supply-chain"],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.5"
+  }
+}
